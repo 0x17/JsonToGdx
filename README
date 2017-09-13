@@ -1,0 +1,11 @@
+== JsonToGdx ==
+A C++14 library for writing GDX files with data taken from JSON objects with specific layout.
+
+Layout:
+{"sets":
+	[{"name": ..., "from": ..., "to": ... }],
+ "parameters": [],
+ "scalars": []
+}
+
+Dependencies: json11, GAMS object oriented C++ API (requires version >=24.9)
