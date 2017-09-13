@@ -1,0 +1,12 @@
+{
+	"sets": [
+		{"name": "i", "from": 1, "to": 4 }
+	],
+	"parameters": [
+		{"name": "v", "indices": "i", "values": [1, 2, 3, 4] },
+		{"name": "w", "indices": "i", "values": [1, 2, 3, 4] }		
+	],
+	"scalars": [
+		{"name": "C", "value": 4}
+	]
+}

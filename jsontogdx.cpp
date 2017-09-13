@@ -39,10 +39,19 @@ void addSetsFromJson(GAMSDatabase &db, const Json &sets) {
     }
 }
 
+void addParametersFromJson(gams::GAMSDatabase &db, const json11::Json &params) {
+    for(const auto &param : params.array_items()) {
+    }
+}
+
+void addScalarsFromJson(gams::GAMSDatabase &db, const json11::Json &scalars) {
+    for(const auto &scalar : scalars.array_items()) {
+    }
+}
+
 static string sysDir, workDir;
 
-void writeJsonStrToGdxFile(const char *jsonStr, const char *gdxFilename) {
-    string jss(jsonStr), gdxfn(gdxFilename);
+gams::GAMSWorkspace _writeJsonStrToGdxFile(const std::string &jss, const std::string &gdxfn) {
     Json obj = loadJsonFromString(jss);
     gams::GAMSWorkspaceInfo wsInfo;
     wsInfo.setSystemDirectory(sysDir);
@@ -51,15 +60,37 @@ void writeJsonStrToGdxFile(const char *jsonStr, const char *gdxFilename) {
     auto db = ws.addDatabase("MyDatabase");
     addDataFromJson(db, obj);
     db.doExport(gdxfn);
+		return ws;
+}
+
+void writeJsonStrToGdxFile(const char *jsonStr, const char *gdxFilename) {
+    string jss(jsonStr), gdxfn(gdxFilename);
+    _writeJsonStrToGdxFile(jss, gdxfn);
 }
 
 void addDataFromJson(GAMSDatabase &db, const Json &obj) {
     addSetsFromJson(db, obj["sets"]);
+    addParametersFromJson(db, obj["parameters"]);
+    addScalarsFromJson(db, obj["scalars"]);
 }
 
 void setGAMSDirectories(const char *systemDirectory, const char *workingDirectory) {
     sysDir = systemDirectory;
     workDir = workingDirectory;
+}
+
+const char *solveModelWithDataJsonStr(const char *modelCode, const char *gdxFilename, const char *jsonStr) {
+	string mc(modelCode), jss(jsonStr), gdxfn(gdxFilename);
+	auto ws = _writeJsonStrToGdxFile(jss, gdxfn);
+	auto job = ws.addJobFromString(mc);
+	auto options = ws.addOptions();
+	//options.setMIP("CPLEX");
+	options.setOptCR(0.0);
+	job.run(options);
+	/*auto outDB = job.outDB();
+	auto zvar = outDB.getVariable("Z");
+	auto xvar = outDB.getVariable("x");*/
+	return "{}";
 }
 
 json11::Json loadJsonFromString(const std::string &s) {
