@@ -131,10 +131,33 @@ const char *solveModelWithDataJsonStr(const char *modelCode, const char *jsonStr
 	//options.setMIP("CPLEX");
 	options.setOptCR(0.0);
 	job.run(options);
-	/*auto outDB = job.outDB();
-	auto zvar = outDB.getVariable("Z");
+	auto outDB = job.outDB();
+    vector<json11::Json> jsvars;
+    for(auto sym : outDB) {
+        GAMSVariable v;
+        if(sym.type() == GAMSEnum::SymTypeVar) {
+            v = (GAMSVariable)sym;
+            if(v.dim() == 0) {
+                cout << "name=" << v.name() << " " << v.dim() << " " << v.firstRecord().level() << endl;
+                jsvars.push_back(json11::Json::object { {"name", v.name() }, {"level", v.firstRecord().level() } });
+            } else if(v.dim() == 1) {
+                cout << v.name() << " " << v.dim() << endl;
+                vector<json11::Json> levels;
+                for(auto rec : v) {
+                    cout << "level[" << rec.key(0) << "]=" << rec.level() << endl;
+                    map<string, double> m = { {rec.key(0), rec.level() } };
+                    auto levelEntry = json11::Json(m);
+                    levels.push_back(levelEntry);
+                }
+                jsvars.push_back(json11::Json::object { {"name", v.name() }, {"levels", levels } });
+            }
+        }
+    }
+	/*auto zvar = outDB.getVariable("Z");
 	auto xvar = outDB.getVariable("x");*/
-	return "{}";
+	string ostr = json11::Json(jsvars).dump();
+    cout << ostr << endl;
+    return ostr.c_str();
 }
 
 json11::Json loadJsonFromString(const std::string &s) {

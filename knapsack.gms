@@ -18,7 +18,7 @@ cap .. sum(i, w(i) * x(i)) =l= C;
 
 model knapsack /obj, cap/;
 
-$GDXIN knapsack_data.gdx
+$GDXIN %gdxincname%
 $LOAD i, v, w, C
 $GDXIN
 
