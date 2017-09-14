@@ -122,17 +122,7 @@ void setGAMSDirectories(const char *systemDirectory, const char *workingDirector
     workDir = workingDirectory;
 }
 
-const char *solveModelWithDataJsonStr(const char *modelCode, const char *jsonStr) {
-	const string GDX_FILENAME = "data";
-	string mc(modelCode), jss(jsonStr);
-	auto ws = _writeJsonStrToGdxFile(jss, GDX_FILENAME+".gdx");
-	auto job = ws.addJobFromString(mc);
-	auto options = ws.addOptions();
-	options.setDefine("gdxincname", GDX_FILENAME);
-	//options.setMIP("CPLEX");
-	options.setOptCR(0.0);
-	job.run(options);
-	auto outDB = job.outDB();
+json11::Json extractResultsFromOutDatabase(GAMSDatabase &outDB) {
     vector<json11::Json> jsvars;
     for(auto sym : outDB) {
         GAMSVariable v;
@@ -154,10 +144,25 @@ const char *solveModelWithDataJsonStr(const char *modelCode, const char *jsonStr
             }
         }
     }
+    return json11::Json(jsvars);
+}
+
+const char *solveModelWithDataJsonStr(const char *modelCode, const char *jsonStr) {
+	const string GDX_FILENAME = "data";
+	string mc(modelCode), jss(jsonStr);
+	auto ws = _writeJsonStrToGdxFile(jss, GDX_FILENAME+".gdx");
+	auto job = ws.addJobFromString(mc);
+	auto options = ws.addOptions();
+	options.setDefine("gdxincname", GDX_FILENAME);
+	//options.setMIP("CPLEX");
+	options.setOptCR(0.0);
+	job.run(options);
+	auto outDB = job.outDB();
 	/*auto zvar = outDB.getVariable("Z");
 	auto xvar = outDB.getVariable("x");*/
-	string ostr = json11::Json(jsvars).dump();
+	string ostr = extractResultsFromOutDatabase(outDB).dump();
     cout << ostr << endl;
+
     return strdup(ostr.c_str());
 }
 
