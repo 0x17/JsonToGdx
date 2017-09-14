@@ -21,5 +21,5 @@ json11::Json loadJsonFromString(const std::string &s);
 extern "C" {
     void setGAMSDirectories(const char *systemDirectory, const char *workingDirectory);
     void writeJsonStrToGdxFile(const char *jsonStr, const char *gdxFilename);
-		const char *solveModelWithDataJsonStr(const char *modelCode, const char *gdxFilename, const char *jsonStr);
+    const char *solveModelWithDataJsonStr(const char *modelCode, const char *jsonStr);
 }

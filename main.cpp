@@ -8,7 +8,8 @@ int main(int argc, char **argv) {
     wsInfo.setWorkingDirectory("/home/andre/Desktop/");
     gams::GAMSWorkspace ws(wsInfo);
     auto db = ws.addDatabase("MyDatabase");
-    addSetsFromJson(db, obj["sets"]);
+    addDataFromJson(db, obj);
+    //addSetsFromJson(db, obj["sets"]);
     //addSet(db, "j", 1, 10, "jobs");
     db.doExport("some.gdx");
     return 0;
