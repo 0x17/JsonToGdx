@@ -7,6 +7,7 @@
 #include <iostream>
 #include <fstream>
 #include <gams.h>
+#include <string.h>
 #include "json11.hpp"
 
 using namespace std;
@@ -157,7 +158,7 @@ const char *solveModelWithDataJsonStr(const char *modelCode, const char *jsonStr
 	auto xvar = outDB.getVariable("x");*/
 	string ostr = json11::Json(jsvars).dump();
     cout << ostr << endl;
-    return ostr.c_str();
+    return strdup(ostr.c_str());
 }
 
 json11::Json loadJsonFromString(const std::string &s) {
