@@ -7,15 +7,21 @@
 #include <gams.h>
 #include "json11.hpp"
 
-void addDataFromJson(gams::GAMSDatabase &db, const json11::Json &obj);
-void addSetsFromJson(gams::GAMSDatabase &db, const json11::Json &sets);
-void addParametersFromJson(gams::GAMSDatabase &db, const json11::Json &params);
-void addScalarsFromJson(gams::GAMSDatabase &db, const json11::Json &scalars);
-
-void addSet(gams::GAMSDatabase &db, const std::string &name, int from, int to, const std::string &description = "");
+namespace jsontogdx {
+	void addDataFromJson(gams::GAMSDatabase &db, const json11::Json &obj);
+	void addSetsFromJson(gams::GAMSDatabase &db, const json11::Json &sets);
+	void addParametersFromJson(gams::GAMSDatabase &db, const json11::Json &params);
+	void addScalarsFromJson(gams::GAMSDatabase &db, const json11::Json &scalars);
+	void addSet(gams::GAMSDatabase &db, const std::string &name, int from, int to, const std::string &description = "");
+}
 
 extern "C" {
     void setGAMSDirectories(const char *systemDirectory, const char *workingDirectory);
+	void setGAMSOptions(const char *jsonStr);
+
     void writeJsonStrToGdxFile(const char *jsonStr, const char *gdxFilename);
+	const char *readJsonStrFromGdxFile(const char *gdxFilename);
+
     const char *solveModelWithDataJsonStr(const char *modelCode, const char *jsonStr);
+	const char *solveModelWithDataJsonStrAndOptions(const char *modelCode, const char *jsonStr, const char *optionsJsonStr);
 }

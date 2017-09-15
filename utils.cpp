@@ -21,6 +21,7 @@ json11::Json utils::loadJsonFromString(const std::string &s) {
     json11::Json obj = json11::Json::parse(s, err);
     if(!err.empty()) {
         std::cout << "Parse error: " << err << "!" << std::endl;
+        return json11::Json::object {};
     }
     return obj;
 }
@@ -32,6 +33,7 @@ json11::Json utils::loadJsonFromFile(const std::string &filename) {
     json11::Json obj = json11::Json::parse(content, error);
     if(!error.empty()) {
         cout << "Parse error: " << error << "!" << endl;
+        return json11::Json::object {};
     }
     return obj;
 }
