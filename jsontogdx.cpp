@@ -6,24 +6,13 @@
 
 #include <iostream>
 #include <fstream>
-#include <gams.h>
-#include <string.h>
-#include "json11.hpp"
+#include <cstring>
+#include <algorithm>
+#include "utils.hpp"
 
 using namespace std;
 using namespace json11;
 using namespace gams;
-
-json11::Json loadJsonFromFile(const std::string &filename) {
-    ifstream ifs(filename);
-    string content((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
-    string error;
-    json11::Json obj = json11::Json::parse(content, error);
-    if(!error.empty()) {
-        cout << "Parse error: " << error << "!" << endl;
-    }
-    return obj;
-}
 
 void addSet(GAMSDatabase &db, const string &name, int from, int to, const string &description) {
     auto s = db.addSet(name, description.empty() ? name : description);
@@ -37,7 +26,10 @@ void addSetsFromJson(GAMSDatabase &db, const Json &sets) {
             string descr = s["description"].is_string() ? s["description"].string_value() : "";
             addSet(db, s["name"].string_value(), s["from"].int_value(), s["to"].int_value(), descr);
         } else if(s["indices"].is_string()) {
-            // Handle 1d dynamic set
+            auto myset = db.addSet(s["name"].string_value(), 1);
+            for(const auto &entry : s["values"].array_items()) {
+                myset.addRecord(entry.string_value()).setText("yes");
+            }
         } else if(s["indices"].is_array()) {
             if(s["indices"].array_items().size() == 2) {
                 auto myset = db.addSet(s["name"].string_value(), 2);
@@ -95,7 +87,7 @@ void addScalarsFromJson(gams::GAMSDatabase &db, const json11::Json &scalars) {
 static string sysDir, workDir;
 
 gams::GAMSWorkspace _writeJsonStrToGdxFile(const std::string &jss, const std::string &gdxfn) {
-    Json obj = loadJsonFromString(jss);
+    Json obj = utils::loadJsonFromString(jss);
     gams::GAMSWorkspaceInfo wsInfo;
     wsInfo.setSystemDirectory(sysDir);
     wsInfo.setWorkingDirectory(workDir);
@@ -103,7 +95,7 @@ gams::GAMSWorkspace _writeJsonStrToGdxFile(const std::string &jss, const std::st
     auto db = ws.addDatabase("MyDatabase");
     addDataFromJson(db, obj);
     db.doExport(gdxfn);
-		return ws;
+    return ws;
 }
 
 void writeJsonStrToGdxFile(const char *jsonStr, const char *gdxFilename) {
@@ -122,6 +114,12 @@ void setGAMSDirectories(const char *systemDirectory, const char *workingDirector
     workDir = workingDirectory;
 }
 
+string fixComma(double v) {
+    string s = to_string(v);
+    std::replace(s.begin(), s.end(), ',', '.');
+    return s;
+}
+
 json11::Json extractResultsFromOutDatabase(GAMSDatabase &outDB) {
     vector<json11::Json> jsvars;
     for(auto sym : outDB) {
@@ -129,22 +127,24 @@ json11::Json extractResultsFromOutDatabase(GAMSDatabase &outDB) {
         if(sym.type() == GAMSEnum::SymTypeVar) {
             v = (GAMSVariable)sym;
             if(v.dim() == 0) {
-                cout << "name=" << v.name() << " " << v.dim() << " " << v.firstRecord().level() << endl;
-                jsvars.push_back(json11::Json::object { {"name", v.name() }, {"level", v.firstRecord().level() } });
+                jsvars.push_back(json11::Json::object { {"name", v.name() }, {"level", fixComma(v.firstRecord().level()) } });
             } else if(v.dim() == 1) {
-                cout << v.name() << " " << v.dim() << endl;
                 vector<json11::Json> levels;
                 for(auto rec : v) {
-                    cout << "level[" << rec.key(0) << "]=" << rec.level() << endl;
-                    map<string, double> m = { {rec.key(0), rec.level() } };
-                    auto levelEntry = json11::Json(m);
-                    levels.push_back(levelEntry);
+                    levels.push_back(Json::object { {rec.key(0), fixComma(rec.level()) } });
+                }
+                jsvars.push_back(json11::Json::object { {"name", v.name() }, {"levels", levels } });
+            } else if(v.dim() == 2) {
+                vector<json11::Json> levels;
+                for(auto rec : v) {
+                    levels.push_back(Json::object { {rec.key(0)+","+rec.key(1), fixComma(rec.level()) } });
                 }
                 jsvars.push_back(json11::Json::object { {"name", v.name() }, {"levels", levels } });
             }
         }
     }
-    return json11::Json(jsvars);
+    json11::Json oobj = json11::Json::object{{"results", jsvars}};
+    return oobj;
 }
 
 const char *solveModelWithDataJsonStr(const char *modelCode, const char *jsonStr) {
@@ -154,26 +154,13 @@ const char *solveModelWithDataJsonStr(const char *modelCode, const char *jsonStr
 	auto job = ws.addJobFromString(mc);
 	auto options = ws.addOptions();
 	options.setDefine("gdxincname", GDX_FILENAME);
-	//options.setMIP("CPLEX");
 	options.setOptCR(0.0);
 	job.run(options);
 	auto outDB = job.outDB();
-	/*auto zvar = outDB.getVariable("Z");
-	auto xvar = outDB.getVariable("x");*/
 	string ostr = extractResultsFromOutDatabase(outDB).dump();
-    cout << ostr << endl;
-
     return strdup(ostr.c_str());
 }
 
-json11::Json loadJsonFromString(const std::string &s) {
-    string err;
-    json11::Json obj = json11::Json::parse(s, err);
-    if(!err.empty()) {
-        cout << "Parse error: " << err << "!" << endl;
-    }
-    return obj;
-}
 
 
 

@@ -15,18 +15,20 @@ void examples::knapsackExample() {
 }
 
 void examples::rcpspRocExample() {
-
+    setGAMSDirectories(_sysDir.c_str(), _wd.c_str());
+    std::string modelCode = utils::slurp("rcpsproc.gms");
+    std::string jss = utils::slurp("rcpsproc_data.json");
+    const char *resstr = solveModelWithDataJsonStr(modelCode.c_str(), jss.c_str());
+    std::cout << resstr;
 }
 
 void examples::writeGdxExample() {
-    json11::Json obj = loadJsonFromFile("example.json");
+    json11::Json obj = utils::loadJsonFromFile("example.json");
     gams::GAMSWorkspaceInfo wsInfo;
     wsInfo.setSystemDirectory(_sysDir);
     wsInfo.setWorkingDirectory(_wd);
     gams::GAMSWorkspace ws(wsInfo);
     auto db = ws.addDatabase("MyDatabase");
     addDataFromJson(db, obj);
-    //addSetsFromJson(db, obj["sets"]);
-    //addSet(db, "j", 1, 10, "jobs");
     db.doExport("some.gdx");
 }

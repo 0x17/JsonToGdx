@@ -3,8 +3,8 @@
 using namespace examples;
 
 int main(int argc, char **argv) {
-    writeGdxExample();
-    knapsackExample();
+    //writeGdxExample();
+    //knapsackExample();
     rcpspRocExample();
     return 0;
 }
