@@ -29,6 +29,6 @@ void examples::writeGdxExample() {
     wsInfo.setWorkingDirectory(_wd);
     gams::GAMSWorkspace ws(wsInfo);
     auto db = ws.addDatabase("MyDatabase");
-    addDataFromJson(db, obj);
+    jsontogdx::addDataFromJson(db, obj);
     db.doExport("some.gdx");
 }
