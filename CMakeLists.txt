@@ -16,9 +16,10 @@ set(CMAKE_CXX_STANDARD 14)
 include_directories(${GAMS_PATH}/apifiles/C/api ${GAMS_PATH}/apifiles/C++/api)
 link_directories(${GAMS_PATH})
 
-set(SHARED_SOURCES json11.cpp json11.hpp jsontogdx.cpp jsontogdx.h)
+set(EXAMPLE_SOURCES examples.cpp examples.hpp)
+set(SHARED_SOURCES json11.cpp json11.hpp jsontogdx.cpp jsontogdx.h utils.cpp utils.hpp)
 
-set(SOURCE_FILES main.cpp ${SHARED_SOURCES})
+set(SOURCE_FILES main.cpp ${SHARED_SOURCES} ${EXAMPLE_SOURCES})
 add_executable(JsonToGdx ${SOURCE_FILES})
 target_link_libraries(JsonToGdx gamscpp pthread)
 
