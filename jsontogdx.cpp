@@ -113,15 +113,16 @@ void jsontogdx::addDataFromJson(GAMSDatabase &db, const Json &obj) {
 // hidden
 static string _sysDir, _workDir, _optionsJsonStr = "";
 
-static gams::GAMSWorkspace _writeJsonStrToGdxFile(const std::string &jss, const std::string &gdxfn) {
+gams::GAMSWorkspace jsontogdx::writeJsonStrToGdxFile(const std::string &jss, const std::string &gdxFilename) {
 	Json obj = utils::loadJsonFromString(jss);
-	gams::GAMSWorkspaceInfo wsInfo;
-	wsInfo.setSystemDirectory(_sysDir);
-	wsInfo.setWorkingDirectory(_workDir);
-	gams::GAMSWorkspace ws(wsInfo);
+	return writeJsonObjToGdxFile(obj, gdxFilename);
+}
+
+gams::GAMSWorkspace jsontogdx::writeJsonObjToGdxFile(const json11::Json &obj, const std::string &gdxFilename) {
+	gams::GAMSWorkspace ws(_workDir, _sysDir);
 	auto db = ws.addDatabase("MyDatabase");
 	jsontogdx::addDataFromJson(db, obj);
-	db.doExport(gdxfn);
+	db.doExport(gdxFilename);
 	return ws;
 }
 
@@ -132,7 +133,7 @@ static string fixComma(double v) {
 // FFI accessible
 void writeJsonStrToGdxFile(const char *jsonStr, const char *gdxFilename) {
     string jss(jsonStr), gdxfn(gdxFilename);
-    _writeJsonStrToGdxFile(jss, gdxfn);
+    jsontogdx::writeJsonStrToGdxFile(jss, gdxfn);
 }
 
 void setGAMSDirectories(const char *systemDirectory, const char *workingDirectory) {
@@ -199,7 +200,7 @@ const char *solveModelWithDataJsonStr(const char *modelCode, const char *jsonStr
 	if(_sysDir.empty() || _workDir.empty()) return "";
 	const string GDX_FILENAME = "data";
 	string mc(modelCode), jss(jsonStr);
-	auto ws = _writeJsonStrToGdxFile(jss, GDX_FILENAME+".gdx");
+	auto ws = jsontogdx::writeJsonStrToGdxFile(jss, GDX_FILENAME+".gdx");
 	auto job = ws.addJobFromString(mc);
 	auto options = ws.addOptions();
 	options.setDefine("gdxincname", GDX_FILENAME);
@@ -214,20 +215,61 @@ const char *solveModelWithDataJsonStr(const char *modelCode, const char *jsonStr
 }
 
 Json gamsSetToJsonObject(GAMSSet &set) {
-	// FIXME: Implement me!
-	return Json::object {};
+	vector<Json> elems;
+	int dim = set.dim();
+
+	for (auto &rec : set) {
+		if(dim == 1) {
+			elems.push_back(rec.key(0));
+		} else if(dim == 2) {
+			vector<Json> keys;
+			for(auto skey : rec.keys()) {
+				keys.push_back(skey);
+			}
+			elems.push_back(keys);
+		}
+	}
+
+	return Json::object {
+			{"name", set.name()},
+			{"dim", dim},
+			{"elements", elems }
+	};
 }
 
 Json gamsParameterToJsonObject(GAMSParameter &param) {
-	// FIXME: Implement me!
-	return Json::object {};
+	int dim = param.dim();
+
+	if(dim == 0) {
+		return Json::object {
+				{"name", param.name()},
+				{"dim", dim},
+				{"value", param.firstRecord().value()}
+		};
+	}
+
+	vector<Json> recs;
+
+	for (auto &rec : param) {
+		vector<Json> kvs;
+		if(dim == 1) {
+			kvs = { rec.key(0), rec.value()};
+			recs.push_back(kvs);
+		} else if(dim == 2) {
+			kvs = { rec.key(0), rec.key(1), rec.value() };
+			recs.push_back(kvs);
+		}
+	}
+
+	return Json::object {
+			{"name", param.name()},
+			{"dim", dim},
+			{"records", recs}
+	};
 }
 
-string _readJsonStrFromGdxFile(const string &gdxFilename) {
-	gams::GAMSWorkspaceInfo wsInfo;
-	wsInfo.setSystemDirectory(_sysDir);
-	wsInfo.setWorkingDirectory(_workDir);
-	gams::GAMSWorkspace ws(wsInfo);
+json11::Json jsontogdx::readJsonObjFromGdxFile(const std::string &gdxFilename) {
+	gams::GAMSWorkspace ws(_workDir, _sysDir);
 	auto db = ws.addDatabaseFromGDX(gdxFilename);
 
 	GAMSSet myset;
@@ -258,11 +300,15 @@ string _readJsonStrFromGdxFile(const string &gdxFilename) {
 	}
 
 	Json obj = Json::object { {"sets", sets}, {"parameters", params}, {"scalars", scalars}, {"variables", vars} };
-	return obj.dump();
+	return obj;
+}
+
+string jsontogdx::readJsonStrFromGdxFile(const string &gdxFilename) {
+	return readJsonObjFromGdxFile(gdxFilename).dump();
 }
 
 const char *readJsonStrFromGdxFile(const char *gdxFilename) {
-	string ostr = _readJsonStrFromGdxFile(gdxFilename);
+	string ostr = jsontogdx::readJsonStrFromGdxFile(gdxFilename);
 	return strdup(ostr.c_str());
 }
 

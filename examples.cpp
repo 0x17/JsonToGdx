@@ -3,8 +3,13 @@
 #include "utils.hpp"
 #include "examples.hpp"
 
+#ifdef __APPLE__
+static std::string _sysDir = "/Applications/GAMS24.9/sysdir/";
+static std::string _wd = "/Users/andreschnabel/Desktop";
+#else
 static std::string _sysDir = "/home/andre/Downloads/gams24.9_linux_x64_64_sfx/";
 static std::string _wd = "/home/andre/Desktop/";
+#endif
 
 void examples::knapsackExample() {
     setGAMSDirectories(_sysDir.c_str(), _wd.c_str());
@@ -23,12 +28,12 @@ void examples::rcpspRocExample() {
 }
 
 void examples::writeGdxExample() {
-    json11::Json obj = utils::loadJsonFromFile("example.json");
-    gams::GAMSWorkspaceInfo wsInfo;
-    wsInfo.setSystemDirectory(_sysDir);
-    wsInfo.setWorkingDirectory(_wd);
-    gams::GAMSWorkspace ws(wsInfo);
-    auto db = ws.addDatabase("MyDatabase");
-    jsontogdx::addDataFromJson(db, obj);
-    db.doExport("some.gdx");
+    setGAMSDirectories(_sysDir.c_str(), _wd.c_str());
+    jsontogdx::writeJsonStrToGdxFile(utils::slurp("example.json"), "some.gdx");
+}
+
+void examples::readGdxExample() {
+    setGAMSDirectories(_sysDir.c_str(), _wd.c_str());
+    jsontogdx::writeJsonStrToGdxFile(utils::slurp("example.json"), "some.gdx");
+    std::cout << jsontogdx::readJsonStrFromGdxFile("some.gdx") << std::endl;
 }

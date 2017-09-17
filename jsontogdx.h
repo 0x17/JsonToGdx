@@ -13,6 +13,12 @@ namespace jsontogdx {
 	void addParametersFromJson(gams::GAMSDatabase &db, const json11::Json &params);
 	void addScalarsFromJson(gams::GAMSDatabase &db, const json11::Json &scalars);
 	void addSet(gams::GAMSDatabase &db, const std::string &name, int from, int to, const std::string &description = "");
+
+	gams::GAMSWorkspace writeJsonObjToGdxFile(const json11::Json &obj, const std::string &gdxFilename);
+	json11::Json readJsonObjFromGdxFile(const std::string &gdxFilename);
+
+	gams::GAMSWorkspace writeJsonStrToGdxFile(const std::string &jsonStr, const std::string &gdxFilename);
+	std::string readJsonStrFromGdxFile(const std::string &gdxFilename);
 }
 
 extern "C" {

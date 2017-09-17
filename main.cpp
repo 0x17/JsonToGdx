@@ -4,7 +4,8 @@ using namespace examples;
 
 int main(int argc, char **argv) {
     //writeGdxExample();
+    readGdxExample();
     //knapsackExample();
-    rcpspRocExample();
+    //rcpspRocExample();
     return 0;
 }

@@ -2,6 +2,8 @@
 
 namespace examples {
     void knapsackExample();
-    void writeGdxExample();
     void rcpspRocExample();
+
+	void writeGdxExample();
+	void readGdxExample();
 }
