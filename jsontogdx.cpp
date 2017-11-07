@@ -15,22 +15,40 @@ using namespace std;
 using namespace json11;
 using namespace gams;
 
+// FIXME: Also handle 2-dimensional non-contiguous sets (e.g. not indices != 1..n) correctly
+static map<string, vector<string>> setCache;
+
 void jsontogdx::addSet(GAMSDatabase &db, const string &name, int from, int to, const string &description) {
     auto s = db.addSet(name, description.empty() ? name : description);
-    for(int j=from; j<=to; j++)
-        s.addRecord(name + to_string(j));
+    vector<string> elems;
+    for(int j=from; j<=to; j++) {
+        string ename = name + to_string(j);
+        s.addRecord(ename);
+        elems.push_back(ename);
+    }
+    setCache.insert(make_pair(name, elems));
 }
 
 void jsontogdx::addSetsFromJson(GAMSDatabase &db, const Json &sets) {
+    auto add1DSetWithExplicitElements = [](GAMSSet &myset, const string &name, const Json::array &items) {
+        vector<string> elems;
+        for(const auto &entry : items) {
+            const string &ename = entry.string_value();
+            myset.addRecord(ename).setText("yes");
+            elems.push_back(ename);
+        }
+        setCache.insert(make_pair(name, elems));
+    };
+
     for(const auto &s : sets.array_items()) {
+        // {"name":"i", "from": 1, "to": 10} => set i /i1*i10/
         if(s["from"].is_number() && s["to"].is_number()) {
             string descr = s["description"].is_string() ? s["description"].string_value() : "";
             addSet(db, s["name"].string_value(), s["from"].int_value(), s["to"].int_value(), descr);
         } else if(s["indices"].is_string()) {
-            auto myset = db.addSet(s["name"].string_value(), 1);
-            for(const auto &entry : s["values"].array_items()) {
-                myset.addRecord(entry.string_value()).setText("yes");
-            }
+            string name = s["name"].string_value();
+            auto myset = db.addSet(name, 1);
+            add1DSetWithExplicitElements(myset, name, s["values"].array_items());
         } else if(s["indices"].is_array()) {
             if(s["indices"].array_items().size() == 2) {
                 auto myset = db.addSet(s["name"].string_value(), 2);
@@ -44,9 +62,7 @@ void jsontogdx::addSetsFromJson(GAMSDatabase &db, const Json &sets) {
             auto myset = db.addSet(s["name"].string_value(), dim);
             switch(dim) {
                 case 1:
-                    for(const auto &element : s["elements"].array_items()) {
-                        myset.addRecord(element.string_value()).setText("yes");
-                    }
+                    add1DSetWithExplicitElements(myset, s["name"].string_value(), s["elements"].array_items());
                     break;
                 case 2:
                     for(const auto &pairstr : s["elements"].array_items()) {
@@ -63,6 +79,27 @@ void jsontogdx::addSetsFromJson(GAMSDatabase &db, const Json &sets) {
 }
 
 void jsontogdx::addParametersFromJson(gams::GAMSDatabase &db, const json11::Json &params) {
+    auto add1DParameter = [](GAMSParameter &p, const string &index, const Json::array &items) {
+        int cctr = 0;
+        for(const auto &varrentry : items) {
+            string keyname = setCache.find(index) != setCache.end() ? setCache[index][cctr] : index + to_string(cctr+1);
+            p.addRecord(keyname).setValue(varrentry.number_value());
+            cctr++;
+        }
+    };
+
+    auto add2DParameter = [](GAMSParameter &p, const vector<string> &indices, const Json::array &items) {
+        int cctr = 0, rctr = 0;
+        for(const auto &row : items) {
+            cctr = 0;
+            for(const auto &entry : row.array_items()) {
+                p.addRecord(indices[0]+to_string(rctr+1), indices[1]+to_string(cctr+1)).setValue(entry.number_value());
+                cctr++;
+            }
+            rctr++;
+        }
+    };
+
     for(const auto &param : params.array_items()) {
 		auto name = param["name"].string_value();
 		vector<string> indices;
@@ -74,24 +111,13 @@ void jsontogdx::addParametersFromJson(gams::GAMSDatabase &db, const json11::Json
 		} else continue;
         auto dim = static_cast<int>(indices.size());
 		auto p = db.addParameter(name, dim);
-        int rctr = 0, cctr = 0;
 		switch(dim) {
             default:
             case 1:
-                for(const auto &varrentry : param["values"].array_items()) {
-                    p.addRecord(indices[0]+to_string(cctr+1)).setValue(varrentry.number_value());
-                    cctr++;
-                }
+                add1DParameter(p, indices[0], param["values"].array_items());
                 break;
             case 2:
-                for(const auto &row : param["values"].array_items()) {
-                    cctr = 0;
-                    for(const auto &entry : row.array_items()) {
-                        p.addRecord(indices[0]+to_string(rctr+1), indices[1]+to_string(cctr+1)).setValue(entry.number_value());
-                        cctr++;
-                    }
-                    rctr++;
-                }
+                add2DParameter(p, indices, param["values"].array_items());
                 break;
         }
     }
@@ -105,6 +131,7 @@ void jsontogdx::addScalarsFromJson(gams::GAMSDatabase &db, const json11::Json &s
 }
 
 void jsontogdx::addDataFromJson(GAMSDatabase &db, const Json &obj) {
+    setCache.clear();
 	addSetsFromJson(db, obj["sets"]);
 	addParametersFromJson(db, obj["parameters"]);
 	addScalarsFromJson(db, obj["scalars"]);
